@@ -1,0 +1,116 @@
+
+<div id="app">
+    <br>
+
+    State:
+    <div id="cards">
+        <span class="card" v-for="card, i in state">
+            {{card.string}}
+        </span>
+    </div>
+
+    <br>
+    All: 
+    <div id="cards">
+        <span class="card" v-for="card, i in all">
+            <span v-if="card.suit == sir">(!)</span>
+            {{card.string}}
+        </span>
+    </div>
+
+    <br>
+    Playable:
+    <div id="cards">
+        <span class="card" v-for="card, i in playable" v-on:click="play(i)">
+            <span v-if="card.suit == sir">(!)</span>
+            {{card.string}}
+        </span>
+    </div>
+
+    <br>
+    Scores:
+    <div id="cards">
+        <span v-for="score, i in scores" class="card">
+            <span v-if="i==turn-1">(*)</span>
+            <b v-if="i==playerId-1">Player {{i+1}}: {{score}}</b>
+            <span v-if="i!=playerId-1">Player {{i+1}}: {{score}}</span>
+        </span>
+    </div>
+</div>
+
+<style> 
+    #cards {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .card {
+        display: inline-block;
+        flex:1;
+        padding: 10px;
+        font-family: "Calibri";
+        box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        text-align: center;
+        font-size: 25px;    
+    }
+
+    .current {
+        font-weight: bold;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            playerId: 1,
+            all: [],
+            playable: [],
+            state: [],
+            turn: 1,
+            scores: [],
+            sir: 0
+        },
+        methods: {
+            play(card) {
+                fetch('/play/' + this.playerId + '/' + card).then((res) => res.json());
+            }
+        },
+        mounted() {
+            var playerId = -1;
+            while (['1', '2', '3'].indexOf(playerId) == -1) {
+                playerId = prompt("Enter player id: ").trim();
+            } 
+            
+            this.playerId = playerId;
+            if (playerId == '1') {
+                fetch('/data/' + this.playerId).then((res) => res.json()).then((json) => {
+                    var cards5 = "First 5 cards: " + json.all.slice(0, 5).map(x=>x.string).join(', ');
+                    
+                    var sir = prompt(cards5 + "\nEnter sir number: (0) Spades, (1) Hearts, (2) Clovers, (3) Diamond");
+                    fetch('/set_sir/' + playerId + '/' + sir);
+                });
+            }
+
+            setInterval( () => {
+                fetch('/data/' + this.playerId).then((res) => res.json()).then((json) => {
+                    this.playable = json.playable;
+                    this.all = json.all;
+                    this.turn = json.turn;
+                    this.scores = json.scores;
+                    this.sir = json.sir;
+
+                    if (json.state.length != 0) {
+                        this.state = json.state;
+                    }
+                    if (this.state.length == 0) {
+                        this.state = [{
+                            string: 'Empty'
+                        }];
+                    }
+                });
+            }, 1000);
+        }
+    })
+</script>
